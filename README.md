@@ -1,6 +1,6 @@
 # AMS2-VDFM-Editor
 Editor for AMS2 VDFM files
-![VDFM Editor screenshot] (VDFM_Editor.png)
+![VDFM Editor screenshot](VDFM_Editor.png)
 # VDFM Editor – Project CARS / Project CARS 2 / AMS2
 
 A standalone, binary-safe editor for **VDFM** vehicle definition files used by  
