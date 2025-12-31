@@ -1,0 +1,217 @@
+Project CARS / Automobilista 2
+Translation for porsche_991_gt3rs.vdfm
+By JDougNY & RangeyRover
+Version 1.0 - October 8, 2018 - Initial release
+Version 1.1 - December 2025 - Modified for AMS2 by RangeyRover, references from GvSE and https://mikevapour.github.io/ams2-modding-docs/vehicles/
+
+NOTE: Address locations are typical for all VDFM files up to the beginning of the string data.
+Use this translation as a guide to editing any VDFM file.
+
+ADDRESS      Little End.  Value   Description
+------------|-----------|------|----------------
+
+[HEADER - 0x000-0x02F (48 bytes)]
+0x010-0x013 = 98010000 = 408 // (Integer) Byte Length of DATA section. Count from 0x030 to end of DATA section (before DATA PAD)
+
+0x015 = 08 // (Byte) number of empty bytes after DATA section (DATA PAD)
+
+0x018-0x01B = 12000000 = 18 // (Integer) Byte length of STRING DATA section
+If additional bytes are inserted into the string data section, this register is incremented accordingly.
+
+0x01D = 0E = 14 // (Byte) number of empty bytes after STRING DATA section (STRING PAD)
+Any changes to STRING DATA section requires a check of remaining empty bytes.
+There is always one "zero" byte after last entry. Empty byte count does not include that last "zero" byte.
+
+0x020-0x023 = 30000000 = 48 // (Integer) Byte length of DATA MAP section (8-byte records)
+0x025 = 00 // (Byte) number of empty bytes after the DATA MAP section (MAP PAD)
+
+0x028-0x02B = 0C000000 = 12 // (Integer) Byte length of END section
+0x02D = 04 // (Byte) number of empty bytes after the END section (END PAD)
+
+(ADDED 1.1 RULE) Section layout from 0x030 onward is fully defined by header lengths/pads:
+DATA + DATA PAD + STRING DATA + STRING PAD + DATA MAP + MAP PAD + END + END PAD.
+
+(ADDED 1.1 RULE) DATA MAP length (0x020-0x023) should be a multiple of 8 (records are 8 bytes).
+
+---
+
+[DATA SECTION - starts at 0x030]
+NOTE: These pointer fields are only meaningful if the corresponding code exists in the DATA MAP.
+All pointer values below are u32 (little-endian) and are offsets into STRING DATA (relative to STRING DATA start).
+
+[Offset 08 of Data Map]
+0x038-0x03B = XX000000 = 0 // (Integer) Location in STRING DATA for Chassis filename (*.CDFBIN)
+
+[Offset 18 of Data Map]
+0x048-0x04B = XX000000 = 0 // (Integer) Location in STRING DATA for Engine filename (*.EDFBIN)
+
+[Offset 20 of Data Map]
+0x050-0x053 = XX000000 = 0 // (Integer) Location in STRING DATA for Clutches filename (*.CBFBIN)
+(ALT/LEGACY NOTE) In some older translations this code is described as Turbo at 0x050.
+
+[Offset 28 of Data Map]
+0x058-0x05B = XX000000 = 0 // (Integer) Location in STRING DATA for Turbo filename (*.TBFBIN)
+If DATA MAP does not call for Offset 28, then no turbo/supercharger is utilized.
+
+[Offset 30 of Data Map]
+0x060-0x063 = XX000000 = 0 // (Integer) Location in STRING DATA for Gearbox filename (*.GDFBIN)
+
+[Offset 38 of Data Map]
+0x068-0x06B = XX000000 = 0 // (Integer) Location in STRING DATA for Suspension filename (*.SDFBIN)
+(ALT NOTE) Some titles/variants use this pointer as Failure Model filename (*.GDFBIN).
+
+[Offset 40 of Data Map]
+0x070-0x073 = XX000000 = 0 // (Integer) Location in STRING DATA for Gearbox filename (*.GDFBIN)
+(ALT NOTE) Some translations call this Collision; see Offset 50 for an additional collision pointer used in some variants.
+
+[Offset 48 of Data Map]
+0x078-0x07B = XX000000 = 0 // (Integer) Location in STRING DATA for Suspension filename (*.SDFBIN)
+(ALT NOTE) Some translations call this Tyre; see Offset 58 below for Tyre in some variants.
+
+[Offset 50 of Data Map]
+0x080-0x083 = XX000000 = 0 // (Integer) Location in STRING DATA for Collision filename(s) (*.XML)
+
+[Offset 58 of Data Map]
+0x088-0x08B = XX000000 = 0 // (Integer) Location in STRING DATA for Tyre filename (*.HDTBIN)
+
+[Offset B8 of Data Map]
+0x0E8-0x0EB = XX000000 = 0 // (Integer) Location in STRING DATA for KERS/DRS/Hybrid filename (*.BBFBIN)
+If DATA MAP does not call for Offset B8, then no *.BBFBIN is utilized.
+
+[Offset C0 of Data Map]
+0x0F0-0x0F3 = XX000000 = 0 // (Integer) Location in STRING DATA for Push-to-pass filename (string)
+
+(ADDED 1.1 RULE) Pointer value rules:
+
+* Pointer is relative to STRING DATA start (not an absolute file offset).
+* Pointer should reference the first byte of a NUL-terminated string inside STRING DATA.
+* Typical “not present / not used” value is 0, but rely on DATA MAP presence to determine whether the field is valid.
+
+0x088-0x08B = B072483F = 0.783 // (Float) FL Wheel/Tyre lateral offset in Meters
+0x08C-0x08F = 3333B33E = 0.350 // (Float) FL Wheel/Tyre vertical offset in Meters
+0x090-0x093 = 1B2F9DBF = -1.228 // (Float) FL Wheel/Tyre fore/aft offset in Meters
+
+0x094-0x097 = B07248BF = -0.783 // (Float) FR Wheel/Tyre lateral offset in Meters
+0x098-0x09B = 3333B33E = 0.350 // (Float) FR Wheel/Tyre vertical offset in Meters
+0x09C-0x09F = 1B2F9DBF = -1.228 // (Float) FR Wheel/Tyre fore/aft offset in Meters
+
+0x0A0-0x0A3 = 4260453F = 0.771 // (Float) RL Wheel/Tyre lateral offset in Meters
+0x0A4-0x0A7 = 6DE7BB3E = 0.367 // (Float) RL Wheel/Tyre vertical offset in Meters
+0x0A8-0x0AB = 1B2F9D3F = 1.228 // (Float) RL Wheel/Tyre fore/aft offset in Meters
+
+0x0AC-0x0AF = 426045BF = -0.771 // (Float) RR Wheel/Tyre lateral offset in Meters
+0x0B0-0x0B3 = 6DE7BB3E = 0.367 // (Float) RR Wheel/Tyre vertical offset in Meters
+0x0B4-0x0B7 = 1B2F9D3F = 1.228 // (Float) RR Wheel/Tyre fore/aft offset in Meters
+
+0x0B8-0x0BB = 14AE873E = 0.265 // (Float) FL Tyre width in Meters
+0x0BC-0x0BF = 0E2D323F = 0.696 // (Float) FL Tyre height in Meters
+
+0x0C0-0x0C3 = 14AE873E = 0.265 // (Float) FR Tyre width in Meters
+0x0C4-0x0C7 = 0E2D323F = 0.696 // (Float) FR Tyre height in Meters
+
+0x0C8-0x0CB = 6666A63E = 0.325 // (Float) RL Tyre width in Meters
+0x0CC-0x0CF = 48E13A3F = 0.730 // (Float) RL Tyre height in Meters
+
+0x0D0-0x0D3 = 6666A63E = 0.325 // (Float) RR Tyre width in Meters
+0x0D4-0x0D7 = 48E13A3F = 0.730 // (Float) RR Tyre height in Meters
+
+0x130-0x0133 = 00400344 = 525.0  // (Float) Brake Disc Glow Min (Start to glow slightly)
+0x134-0x0137 = 00007A44 = 1000.0 // (Float) Brake Disc Glow Max (Full glow effect)
+0x138-0x013B = 0000803F = 1.0       // (Float) ??
+0x13C-0x013F = 0000803F = 1.0       // (Float) ??
+
+Unknown
+
+0x140-0x0144 = 0000803F = 1.0 // (Float) ??
+0x13C-0x013F = 0000803F = 1.0 // (Float) ??
+0x140-0x143 = 0000803F = 1.0 // (Float) ??
+0x144-0x147 = FFFFFFFF // Beginning of Container...appears to be
+0x148-0x14B = 01000000 = 1 // (Integer) ??
+0x14C-0x14F = 01000000 = 1 // (Integer) ??
+0x150-0x153 = 01000000 = 1 // (Integer) ??
+0x154-0x157 = 01000000 = 1 // (Integer) ??
+0x158-0x15B = 01000000 = 1 // (Integer) ??
+0x15C-0x15F = 01000000 = 1 // (Integer) ??
+0x160-0x163 = 01000000 = 1 // (Integer) ??
+0x164-0x167 = 01000000 = 1 // (Integer) ??
+0x168-0x16B = 01000000 = 1 // (Integer) ??
+0x16C-0x16F = 01000000 = 1 // (Integer) ??
+0x170-0x173 = 01000000 = 1 // (Integer) ??
+0x174-0x177 = 01000000 = 1 // (Integer) ??
+0x178-0x17B = 01000000 = 1 // (Integer) ??
+0x17C-0x17F = 0000B841 = 23.0 // (Float) ??
+0x180-0x183 = 00000000 = 0
+0x184-0x187 = 0000803F = 1.0 // (Float) ??
+0x188-0x18B = 0000803F = 1.0 // (Float) ??
+0x18C-0x18F = 0000803F = 1.0 // (Float) ??
+0x190-0x193 = 0000803F = 1.0 // (Float) ??
+0x194-0x197 = 8FC2753E = 0.24 // (Float) ??
+0x198-0x19B = 8FC2753D = 0.06 // (Float) ??
+0x19C-0x19F = CDCC8C40 = 4.4 // (Float) ??
+0x1A0-0x1A3 = 00008040 = 4.0 // (Float) ??
+0x1A4-0x1A7 = C3F5A83E = 0.33 // (Float) ??
+0x1A8-0x1AB = 6666E63E = 0.45 // (Float) ??
+0x1AC-0x1AF = 6666863F = 1.05 // (Float) ??
+0x1B0-0x1B3 = CDCC4C3F = 0.8 // (Float) ??
+0x1B4-0x1B7 = 00000000 = 0
+0x1B8-0x1BB = 3333333F = 0.7 // (Float) ??
+0x1BC-0x1BF = 00000000 = 0
+0x1C0-0x1C3 = 0AD7233C = 0.01 // (Float) ??
+0x1C4-0x1C7 = 00000000 = 0
+0x1C8-0x1CB = 00000000 = 0
+
+Backfire Frequency
+0x1CC-0x1CF = 00 00 00 3F = 0.5 = backfire: left exhaust backfire frequency
+0x1D0-0x1D4 = CD CC 4C 3D =0.5 = backfire: right exhaust backfire frequency
+
+NOTE: From this point onward the addresses can change, due to both the
+byte length of the STRING DATA section and the size of the DATA MAP section.
+No matter the addresses the code will flow the same as follows...
+STRING DATA
+empty bytes for STRING DATA
+DATA MAP
+empty bytes for DATA MAP (if any)
+END SECTION
+Empty bytes for END SECTION
+
+[STRING DATA SECTION]
+NUL-terminated strings. There is always one "zero" byte after each entry in this section.
+
+(ADDED 1.1 RULE) Offsets stored in pointer fields (DATA) are relative to the start of STRING DATA.
+If you change STRING DATA length, you must ensure pointers remain valid and header string length (0x018-0x01B) is updated accordingly.
+
+[DATA MAP SECTION]
+
+This section performs parsing of the STRING DATA section, per the codes
+defined within this section.
+
+(ADDED 1.1 RULE) Each DATA MAP record is 8 bytes:
+
+* u32 code (little-endian)
+* 4 bytes padding (typically 00 00 00 00)
+
+The Offset Values are as follows (expanded known set)...
+08 = 0x038 = Chassis file lookup (*.CDFBIN)
+18 = 0x048 = Engine file lookup (*.EDFBIN)
+20 = 0x050 = Clutches file lookup (*.CBFBIN) (legacy docs may call turbo here)
+28 = 0x058 = Turbo file lookup (*.TBFBIN)
+30 = 0x060 = Gearbox file lookup (*.GDFBIN)
+38 = 0x068 = Suspension file lookup (*.SDFBIN) (variant: Failure model *.GDFBIN)
+40 = 0x070 = Gearbox file lookup (*.GDFBIN) (variant mappings exist)
+48 = 0x078 = Suspension file lookup (*.SDFBIN) (variant mappings exist)
+50 = 0x080 = Collision file lookup (*.XML)
+58 = 0x088 = Tyre file lookup (*.HDTBIN)
+B8 = 0x0E8 = KERS/DRS/Hybrid file lookup (*.BBFBIN)
+C0 = 0x0F0 = Push-to-pass string lookup
+
+Actual Data Map for this VDFM (example from porsche_991_gt3rs.vdfm)
+0x1F0 = 08 = 0x038 = Chassis file lookup
+0x1F8 = 18 = 0x048 = Engine file lookup
+0x200 = 30 = 0x060 = Gearbox file lookup
+0x208 = 38 = 0x068 = Suspension file lookup
+0x210 = 40 = 0x070 = Collision file lookup
+0x218 = 48 = 0x078 = Tyre file lookup
+
+[END SECTION]
+End section and empty bytes for end section (length/pad defined in header).
+
