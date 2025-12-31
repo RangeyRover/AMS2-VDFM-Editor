@@ -1,0 +1,184 @@
+Implicit embedded system requirements
+1) File format integrity requirements
+1.	The editor shall treat the VDFM file as a fixed sectioned binary container with this sequence: Header → Data (+ pad) → Strings (+ pad) → Data Map (+ pad) → End (+ pad) → Trailing bytes.
+2.	The editor shall use header fields as the single source of truth for locating and slicing sections (not hard-coded offsets beyond the base 0x30).
+3.	The editor shall preserve “pad” regions and any trailing bytes exactly as they were found (pads are not recomputed; trailing is carried through).
+4.	The editor shall write back only the header length/pad fields it understands, leaving all other header bytes unchanged.
+5.	The editor shall support VDFM files whose total size changes when structural edits occur (module add/remove or string resize).
+2) Data Map interpretation requirements
+6.	The editor shall interpret the Data Map as an array of 8-byte records where the first 4 bytes are a little-endian code and the remaining 4 bytes are currently treated as unused/zero.
+7.	The editor shall determine module presence solely from the Data Map codes (not from pointer values).
+8.	The editor shall canonicalise Data Map contents on structural rebuild: unique codes, sorted ascending, with each code emitted as an 8-byte record.
+3) Module pointer model requirements
+9.	The editor shall treat a module as “present” only if its map code exists in the Data Map, even if its pointer is zero or its string is empty.
+10.	The editor shall only read and shift pointer fields for modules that are currently present (the “active pointer defs” list).
+11.	The editor shall assume that module pointers are 32-bit little-endian offsets into the String section, and are “string-relative” (not absolute file offsets).
+12.	The editor shall enforce a known mapping of map_code → pointer location in the Data section using a fixed definition table (MAP_PTR_DEFS).
+13.	When a module is removed, the editor shall zero its pointer field, regardless of prior value.
+14.	When a module is added, the editor shall set its pointer field to the selected/created filename’s string-relative offset.
+4) String table requirements
+15.	The editor shall treat the String section as a NUL-terminated concatenation of strings, decoded and encoded as latin-1 to preserve raw bytes.
+16.	The editor shall treat an empty string followed only by zeros as end-of-string-table padding, and stop parsing there.
+17.	The editor shall not allow embedded NUL bytes inside string payloads.
+18.	The editor shall allow resizing of string entries and adjust relevant pointers accordingly.
+19.	When editing a string, the editor shall rebuild the entire string table (reassigning all string offsets sequentially from 0).
+20.	When adding a module string, the editor shall support two modes:
+o	reuse an existing identical string (preferred when selected),
+o	or always append a new string even if identical exists.
+21.	The editor shall accept that module string removal is not fully implemented (current behaviour: remove module record & pointer, but does not compact/remove orphan strings), meaning the file can accumulate unused strings over time unless additional compaction logic exists.
+5) Pointer validation requirements
+22.	The editor shall validate newly-added module pointers to ensure they:
+o	fall within the string section bounds,
+o	point to a NUL-terminated string,
+o	point to a string start (either offset 0 or preceded by NUL).
+23.	The editor shall not comprehensively validate all pointers after every change; validation is currently scoped to newly-added pointers (structural rebuild) and warnings for pointers that land inside an edited span (string edit).
+24.	If a pointer points “inside” the edited string span during string edit, the editor shall not automatically repair it, but shall warn the user.
+6) In-place scalar edit requirements
+25.	Float edits shall be strictly in-place and shall never change file size or section sizes.
+26.	Float fields are assumed to be IEEE754 32-bit little-endian at fixed absolute offsets.
+27.	The editor shall format displayed floats without scientific notation (human factors requirement).
+7) Safety / robustness requirements (implicit)
+28.	The editor shall fail safely on parse errors (show an error and refuse to proceed).
+29.	The editor shall not assume pointers or offsets are valid; bounds checks are required before reading/writing.
+30.	The editor shall preserve unknown data, especially:
+o	header bytes outside the known fields,
+o	pad regions,
+o	end section bytes,
+o	trailing bytes.
+31.	The editor is a single-user offline tool: no concurrency, no background tasks, no journalling/transaction safety beyond revert-to-opened-file.
+32.	Revert shall restore the entire original file blob exactly as opened.
+8) UI/operability requirements
+33.	The tool shall provide a way to open/save/save-as and revert.
+34.	The tool shall provide a tree-driven navigation model for header fields, modules, map codes, pointer fields, floats, and raw strings.
+35.	The hex view shall be read-only and able to jump to offsets, but it currently renders the whole file at once (an implied performance assumption: files are “small enough” to do that).
+Below is an updated “translation file” that incorporates the rules embedded in your current program (header-driven slicing, 8-byte Data Map records, dynamic “modules present/missing”, and the expanded MAP_PTR_DEFS set). I’ve kept JDougNY’s style/structure, but updated the Data Map codes + what they mean, and added the validation rules your editor enforces.
+________________________________________
+Project CARS / Project CARS 2 / AMS2
+VDFM Structure & Translation Rules (updated to match vdfm_editor.py behavior)
+Translation basis: JDougNY VDFM notes + editor-implemented parsing rules
+Applies to: VDFM files where the layout is header-driven into these sections:
+1.	HEADER (always 0x000–0x02F)
+2.	DATA (length from header)
+3.	DATA PAD (count from header)
+4.	STRING DATA (length from header)
+5.	STRING PAD (count from header)
+6.	DATA MAP (length from header, must be multiple of 8)
+7.	MAP PAD (count from header)
+8.	END SECTION (length from header)
+9.	END PAD (count from header)
+10.	TRAILING (any bytes after the above; editor preserves)
+Important rule (editor validation): total length computed from the header must not run past EOF.
+Important rule (editor validation): map_len % 8 == 0 (data map is 8-byte records).
+________________________________________
+[HEADER — 0x000–0x02F (48 bytes)]
+All values are little-endian unless noted.
+0x010–0x013 = data_len (u32)
+•	Byte length of the DATA section.
+•	DATA section starts at 0x030 and runs for data_len bytes.
+0x015 = data_pad (u8)
+•	Number of pad bytes immediately after DATA.
+0x018–0x01B = string_len (u32)
+•	Byte length of the STRING DATA section.
+0x01D = string_pad (u8)
+•	Number of pad bytes immediately after STRING DATA.
+•	Note (historical JDougNY rule retained): there is always at least one NUL (0x00) after the last string entry; padding count conceptually refers to “unused empty bytes”, but the editor treats string_len and string_pad literally as section sizing.
+0x020–0x023 = map_len (u32)
+•	Byte length of the DATA MAP section.
+•	Must be a multiple of 8 (8-byte records).
+0x025 = map_pad (u8)
+•	Number of pad bytes immediately after DATA MAP.
+0x028–0x02B = end_len (u32)
+•	Byte length of the END section.
+0x02D = end_pad (u8)
+•	Number of pad bytes immediately after END.
+________________________________________
+Section layout (computed by the editor)
+Let base = 0x030.
+•	DATA: base .. base + data_len - 1
+•	DATA PAD: next data_pad bytes
+•	STRING DATA: next string_len bytes
+•	STRING PAD: next string_pad bytes
+•	DATA MAP: next map_len bytes (8-byte records)
+•	MAP PAD: next map_pad bytes
+•	END: next end_len bytes
+•	END PAD: next end_pad bytes
+•	TRAILING: whatever remains (preserved)
+________________________________________
+[DATA SECTION — starts at 0x030, length = data_len]
+String pointer fields (present only if the Data Map contains that module code)
+Each pointer is a u32 stored in the DATA section at a fixed absolute file offset.
+Its value is a relative offset into the STRING DATA section (0 = no string / none).
+Editor rule: which pointer fields are “active” is determined dynamically from the Data Map codes present.
+Known module pointer definitions (MAP_PTR_DEFS in the editor)
+These are the “modules” your tree shows as PRESENT / MISSING.
+Map Code	Pointer Location (abs offset)	Meaning / filename type
+0x08	0x038	Chassis filename (*.CDFBIN)
+0x18	0x048	Engine filename (*.EDFBIN)
+0x20	0x050	Clutches filename (*.CBFBIN)
+0x28	0x058	Turbo filename (*.TBFBIN)
+0x38	0x068	Failure model filename (*.GDFBIN)
+0x40	0x070	Gearbox filename (*.GDFBIN)
+0x48	0x078	Suspension filename (*.SDFBIN)
+0x50	0x080	Collision filename (*.XML)
+0x58	0x088	Tyre filename (*.HDTBIN)
+0xB8	0x0E8	KERS/DRS/Hybrid filename (*.BBFBIN)
+0xC0	0x0F0	Push-to-pass filename (string)
+Pointer value rules (editor):
+•	If a module code is missing from the Data Map, the editor will show it as missing and will treat the pointer as logically inactive.
+•	If a module code is present but pointer value is 0, the editor will show “pointer=0”.
+•	Pointer values must point to a valid NUL-terminated string within the string section, and must be aligned to a string start (either rel_off=0 or previous byte is NUL).
+________________________________________
+[STRING DATA SECTION]
+Strings are stored as:
+•	latin-1 bytes (byte-preserving)
+•	NUL terminated (0x00)
+•	followed by optional padding bytes (per string_pad)
+Editor parsing rule:
+•	Strings are read sequentially until it hits an empty string (0x00) and the rest of the string section is all zeros (treated as padding region).
+________________________________________
+[DATA MAP SECTION]
+Record format (editor rule)
+The Data Map is parsed as 8-byte records:
+•	u32 code (little-endian)
+•	followed by 4 bytes (typically 00 00 00 00)
+Any record with code == 0 is ignored.
+Canonical ordering rule (editor)
+When rebuilding:
+•	codes are treated as unique
+•	sorted ascending by code
+•	written back as 8-byte records (<I code + 4 zero bytes)
+What the Data Map does
+The Data Map determines which pointer fields/modules are present in the DATA section, and therefore which filename pointers are considered valid / used.
+________________________________________
+[END SECTION]
+The END section is end_len bytes, followed by end_pad bytes.
+The editor does not interpret END contents beyond preserving them and showing layout.
+________________________________________
+Structural editing rules (Add/Remove Module in the editor)
+Add / Insert Module
+When you “Add Module” for a missing code:
+1.	Adds the module code into Data Map (8 bytes)
+2.	Ensures there is a module filename string:
+o	“Use existing” tries to reuse an existing identical string; if not found, it appends
+o	“Enter new” always appends a new string entry
+3.	Writes the pointer (u32) in DATA at that module’s pointer location to the string’s relative offset
+4.	Updates header fields:
+o	string_len becomes the new string section byte length
+o	map_len becomes the new map byte length (8 * number_of_codes)
+5.	Validates new pointers:
+o	must be within string section
+o	must land on a string start
+o	must have a terminating NUL
+Delete / Remove Module
+When you “Remove Module” for a present code:
+1.	Removes the module code record from the Data Map
+2.	Zeros the pointer in DATA for that module
+3.	Updates header map_len (and string_len if it removed an appended string in your workflow — your current implementation mainly preserves strings unless you appended during add; the tool’s message says it compacts, but the implemented code primarily appends on add and leaves old strings unless rebuilt by string edit)
+________________________________________
+Notes about “address stability”
+JDougNY’s original note still holds in principle, but the editor’s approach is stricter:
+•	Absolute offsets of pointer fields are treated as fixed by the editor (see table above).
+•	The section boundaries after 0x030 are not assumed; they are computed from header lengths and pads.
+•	The “from this point onward addresses can change” is handled by the header-driven slicing; the editor doesn’t rely on hard-coded “string starts at 0x1D0” style assumptions.
+________________________________________
+ 
