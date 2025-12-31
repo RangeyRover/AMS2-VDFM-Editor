@@ -6,7 +6,7 @@ Editor for AMS2 VDFM files
 A standalone, binary-safe editor for **VDFM** vehicle definition files used by  
 **Project CARS**, **Project CARS 2**, and **Automobilista 2 (AMS2)**.
 
-This tool is designed for **engineering-grade inspection and controlled modification**
+This tool is designed for **Inspection and controlled modification**
 of VDFM files while preserving the game’s internal structural rules.
 
 ---
